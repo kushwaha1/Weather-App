@@ -10,16 +10,16 @@
     <link rel="stylesheet" href="output.css">
 </head>
 
-<body>
+<body class="min-h-screen text-white bg-gradient-to-b from-sky-700 to-indigo-900">
     <!-- Background video -->
-    <div class="video-wrapper">
+    <section class="video-wrapper">
         <video id="bgVideo" autoplay muted loop playsinline preload="auto"
             class="bg-video brightness-60 sm:brightness-65">
             <source id="bgSource" src="assets/bg-video-day.mp4" type="video/mp4">
         </video>
-    </div>
+    </section>
     <!-- Dark overlay over video -->
-    <div class="bg-overlay bg-black/40 sm:bg-black/30"></div>
+    <div class="bg-overlay"></div>
 
     <!-- Main content wrapper -->
     <main id="app" class="relative max-w-6xl mx-auto p-4">
@@ -39,16 +39,52 @@
         <section id="controls"
             class="flex flex-col gap-2 items-stretch mb-6 sm:flex-row sm:gap-1 sm:flex-nowrap md:gap-2 md:flex-wrap">
             <input id="cityInput" type="text" placeholder="Enter city (eg. Delhi)"
-                class="px-4 py-2 rounded w-full sm:w-2/5 md:flex-1 md:min-w-[200px]"
-                aria-label="City input">
+                class="px-4 py-2 rounded w-full sm:w-2/5 md:flex-1 md:min-w-[200px]" aria-label="City input">
             <button id="searchBtn" class="px-6 py-2 rounded w-full sm:w-[15%] md:min-w-[100px]">Search</button>
-            <button id="currentBtn"
-                class="px-4 py-2 rounded w-full sm:w-1/4 md:min-w-[100px]">Use Current Location</button>
+            <button id="currentBtn" class="px-4 py-2 rounded w-full sm:w-1/4 md:min-w-[100px]">Use Current
+                Location</button>
             <select id="recentCities" class="hidden px-4 py-2 rounded w-full sm:w-1/5 md:min-w-[120px]"
                 aria-label="Recent cities"></select>
         </section>
+
+        <!-- Loading indicator -->
+        <section id="loadingWrap" class="hidden items-center justify-center mb-4">
+            <div class="spinner" aria-hidden="true"></div>
+            <p class="ml-3">Loading...</p>
+        </section>
+
+        <!-- Current weather display -->
+        <section id="weatherDisplay" class="glass rounded-xl p-4 sm:p-6 shadow-lg hidden mx-auto w-full">
+            <div class="flex flex-row items-center justify-between gap-4 w-full">
+
+                <!-- Left side: city, time, temperature -->
+                <div class="flex-1">
+                    <h2 id="cityName" class="text-base sm:text-xl font-semibold">City Name</h2>
+                    <p id="localTime" class="text-xs sm:text-sm opacity-80">Local time: --:--</p>
+                    <p id="weatherCondition" class="text-xs sm:text-sm opacity-90">Condition</p>
+
+                    <div class="flex items-center mt-2">
+                        <img id="weatherIcon" src="" alt="Weather icon" class="w-10 h-10 sm:w-16 sm:h-16 mr-3">
+                        <p id="temperature" class="text-lg sm:text-4xl font-bold">--°C</p>
+                    </div>
+                </div>
+
+                <!-- Right side: humidity, wind, pressure -->
+                <div class="text-xs sm:text-sm text-right">
+                    <p>Humidity: <span id="humidity">--</span>%</p>
+                    <p>Wind: <span id="wind">--</span> m/s</p>
+                    <p>Pressure: <span id="pressure">--</span> hPa</p>
+                </div>
+            </div>
+        </section>
     </main>
- 
+
+    <!-- Custom popup alert -->
+    <section id="customPopup" class="custom-popup hidden" role="status" aria-live="polite">
+        <div id="popupMessage">Alert</div>
+        <button id="popupClose" type="button">Close</button>
+    </section>
+
 
 
 
