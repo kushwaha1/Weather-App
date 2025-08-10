@@ -81,9 +81,3 @@ select option {
     padding: 0.25rem 0.5rem;
     border-radius: 6px;
 }
-
-@keyframes spin {
-    to {
-        transform: rotate(360deg)
-    }
-}

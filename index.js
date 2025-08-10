@@ -1,6 +1,10 @@
 // Defining the API key for OpenWeatherMap
 const WEATHER_API_KEY = "d51ad29ad9fe76f76b4358982339d9f7";
 
+let isCelsius = true;
+let currentWeatherData = null;
+let forecastData = null;
+
 const els = {
     bgVideo: document.getElementById("bgVideo"),
     bgSource: document.getElementById("bgSource"),
@@ -9,7 +13,6 @@ const els = {
     currentBtn: document.getElementById("currentBtn"),
     recentCities: document.getElementById("recentCities"),
     unitSelector: document.getElementById("unitSelector"),
-    loadingWrap: document.getElementById('loadingWrap'),
     weatherDisplay: document.getElementById("weatherDisplay"),
     cityName: document.getElementById("cityName"),
     localTime: document.getElementById("localTime"),
@@ -19,6 +22,7 @@ const els = {
     humidity: document.getElementById("humidity"),
     wind: document.getElementById("wind"),
     pressure: document.getElementById("pressure"),
+    forecastContainer: document.getElementById("forecastContainer"),
     customPopup: document.getElementById("customPopup"),
     popupMessage: document.getElementById("popupMessage"),
     popupClose: document.getElementById("popupClose"),
@@ -26,11 +30,6 @@ const els = {
 
 // Declaring variable to manage popup timeout
 let popupTimeout;
-
-// Toggling loading indicator visibility
-function showLoading(show = true) {
-    els.loadingWrap.classList.toggle('hidden', !show);
-}
 
 // Hiding the custom popup
 function hidePopup() {
@@ -58,7 +57,7 @@ function kelvinToC(k) {
 function formatTempFromKelvin(k) {
     if (k === undefined || k === null) return '--';
     const c = kelvinToC(k);
-    return `${Math.round(c)}°C`;
+    return isCelsius ? `${Math.round(c)}°C` : `${Math.round((c * 9 / 5) + 32)}°F`;
 }
 
 // Formatting local time based on timezone offset
@@ -71,6 +70,7 @@ function formatLocalTime(timezoneSec) {
 // Rendering current weather data to the UI
 function renderCurrent(data) {
     if (!data) return;
+    currentWeatherData = data; // Storing current weather data for later use
 
     els.cityName.textContent = `${data.name}, ${data.sys?.country || ''}`; // Setting city and country
     els.weatherCondition.textContent = data.weather?.[0]?.description || ''; // Setting weather condition
@@ -89,26 +89,33 @@ function renderCurrent(data) {
     const iconCode = data.weather?.[0]?.icon || '01d';
     els.weatherIcon.src = `https://openweathermap.org/img/wn/${iconCode}@2x.png`;
 
+    updateBackgroundFromData(data);
+
+    const tempC = data.main?.temp ? Math.round(kelvinToC(data.main.temp)) : null;
+    if (tempC !== null && tempC > 40) showPopup('⚠️ Extreme Heat Alert! Stay hydrated.');
+    else if (tempC !== null && tempC < -10) showPopup('⚠️ Extreme Cold Alert! Stay warm.');
+    else hidePopup();
+
     els.weatherDisplay.classList.remove('hidden'); // Showing weather display
 }
 
 // Fetching weather data by geographic coordinates
 async function fetchWeatherByCoords(lat, lon) {
     hidePopup();
-    showLoading(true);
     try {
         const weatherRes = await fetch(
             `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${WEATHER_API_KEY}`
         ); // Fetching weather data using coordinates
         if (!weatherRes.ok) throw new Error(`Location not found: ${weatherRes.status}`);
         const weatherData = await weatherRes.json(); // Parsing JSON response
+        currentWeatherData = weatherData;
         renderCurrent(weatherData); // Rendering the fetched data
+        saveRecent(weatherData.name); // Saving recent city
+        await fetchForecast(lat, lon);
     } catch (err) {
         showPopup('Failed to fetch location or weather data. Using default city.');
         console.error('fetchWeatherByCoords error:', err);
         fetchWeatherByCity('Delhi');  // Falling back to default city
-    } finally {
-        showLoading(false);
     }
 }
 
@@ -116,19 +123,19 @@ async function fetchWeatherByCoords(lat, lon) {
 async function fetchWeatherByCity(city) {
     if (!city || !city.trim()) { showPopup('Please enter a valid city name.'); return; }
     hidePopup();
-    showLoading(true);
     try {
         const res = await fetch(
             `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${WEATHER_API_KEY}`
         ); // Fetching weather data using city name
         if (!res.ok) throw new Error(`City not found: ${res.status}`);
         const data = await res.json(); // Parsing JSON response
+        currentWeatherData = data;
         renderCurrent(data); // Rendering the fetched data
+        saveRecent(data.name); // Saving recent city
+        await fetchForecast(data.coord.lat, data.coord.lon);
     } catch (err) {
         showPopup('City not found or network error.');
         console.error('fetchWeatherByCity error:', err);
-    } finally {
-        showLoading(false);
     }
 }
 
@@ -141,7 +148,6 @@ function useCurrentLocation() {
         fetchWeatherByCity('Delhi'); // Falling back to default city
         return;
     }
-    showLoading(true);
     navigator.geolocation.getCurrentPosition(
         pos => {
             console.log('Current position:', pos);
@@ -153,7 +159,6 @@ function useCurrentLocation() {
             if (err.code === 1) showPopup('Location access denied. Using default city.');
             else showPopup('Unable to get location. Using default city.');
             fetchWeatherByCity('Delhi');
-            showLoading(false);
         },
         { enableHighAccuracy: true, timeout: 8000 } // Geolocation options
     );
@@ -178,6 +183,99 @@ function renderRecent(arr) {
     el.innerHTML = arr.map(c => `<option value="${c}">${c}</option>`).join(''); // Generating options for recent cities
 }
 
+// Fetching and updating background video based on weather data
+function updateBackgroundFromData(data) {
+    console.log('Updating background with data:', data);
+    if (!data || !data.sys || !data.sys.sunrise || !data.sys.sunset || typeof data.timezone !== 'number') {
+        els.bgSource.src = 'assets/bg-video-day.mp4';
+        els.bgVideo.load();
+        return null;
+    }
+    const timezoneOffset = data.timezone; // seconds
+    const nowUTC = Date.now();
+    const nowLocal = new Date(nowUTC + timezoneOffset * 1000);
+
+    const sunriseUTC = data.sys.sunrise * 1000;
+    const sunsetUTC = data.sys.sunset * 1000;
+    const sunriseLocal = new Date(sunriseUTC + timezoneOffset * 1000);
+    const sunsetLocal = new Date(sunsetUTC + timezoneOffset * 1000);
+
+    const weatherMain = data.weather[0].main.toLowerCase();
+    const marginMs = 2 * 60 * 1000; // 2 minutes margin
+
+    let src;
+    if (weatherMain.includes('rain')) {
+        src = `assets/bg-video-rainy.mp4?t=${Date.now()}`;
+    } else if (nowLocal.getTime() >= (sunsetLocal.getTime() - marginMs) ||
+        nowLocal.getTime() < sunriseLocal.getTime()) {
+        src = `assets/bg-video-night.mp4?t=${Date.now()}`;
+    } else {
+        src = `assets/bg-video-day.mp4?t=${Date.now()}`;
+    }
+
+    if (els.bgSource && !els.bgSource.src.endsWith(src.split('?')[0])) {
+        els.bgSource.src = src;
+        els.bgVideo.load();
+        els.bgVideo.onerror = () => {
+            els.bgSource.src = `${src.split('?')[0]}?t=${Date.now()}`;
+            els.bgVideo.load();
+        };
+    }
+}
+
+// Fetching 5-day forecast data based on coordinates
+async function fetchForecast(lat, lon) {
+    try {
+        const res = await fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${WEATHER_API_KEY}`);
+        if (!res.ok) throw new Error(`Forecast fetch failed: ${res.status}`);
+        const data = await res.json();
+        forecastData = data.list.filter((_, i) => i % 8 === 0).slice(0, 5);
+        renderForecast();
+    } catch (err) {
+        showPopup('Failed to load forecast. Please try again.');
+        console.error('fetchForecast error:', err);
+        forecastData = [];
+        renderForecast();
+    }
+}
+
+// Fetching and rendering weather data for current location
+function renderForecast() {
+    if (!forecastData || forecastData.length === 0) {
+        els.forecastContainer.innerHTML = '<p class="text-sm opacity-80">No forecast data available.</p>';
+        return;
+    }
+    els.forecastContainer.innerHTML = forecastData.map(d => {
+        const date = new Date(d.dt_txt).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+        const iconCode = d.weather?.[0]?.icon || '01d';
+        return `<div class="glass text-white p-4 rounded-lg shadow">
+          <p class="font-semibold">${date}</p>
+            <!-- MOBILE: Temp left, Humidity/Wind right -->
+            <div class="flex items-center justify-between sm:hidden mt-2">
+            <div class="flex items-center gap-2">
+                <img src="https://openweathermap.org/img/wn/${iconCode}@2x.png" 
+                    alt="Weather icon" class="w-12 h-12">
+                <span class="text-lg font-bold">${formatTempFromKelvin(d.main.temp)}</span>
+            </div>
+            <div class="flex flex-col items-end text-sm">
+                <span>💧 ${d.main.humidity}%</span>
+                <span>🌬️ ${d.wind.speed} m/s</span>
+            </div>
+            </div>
+
+            <!-- DESKTOP/TABLET: Vertical stack -->
+            <div class="hidden sm:flex flex-col mt-2">
+            <img src="https://openweathermap.org/img/wn/${iconCode}@2x.png" 
+                alt="Weather icon" class="w-12 h-12">
+            <p class="mt-2">${formatTempFromKelvin(d.main.temp)}</p>
+            <p class="text-sm mt-1">💧 ${d.main.humidity}%</p>
+            <p class="text-sm">🌬️ ${d.wind.speed} m/s</p>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+
 // Adding event listeners for search and current location buttons
 els.searchBtn.addEventListener('click', () => { fetchWeatherByCity(els.cityInput.value); }); // Handling search button click to fetch weather by city
 els.cityInput.addEventListener('keydown', e => { if (e.key === 'Enter') fetchWeatherByCity(els.cityInput.value); }); // Handling Enter key press to fetch weather by city
@@ -186,6 +284,7 @@ els.recentCities.addEventListener('change', e => { fetchWeatherByCity(e.target.v
 els.unitSelector.addEventListener('change', () => {
     isCelsius = els.unitSelector.value === 'C';
     if (currentWeatherData) renderCurrent(currentWeatherData);
+    if (forecastData) renderForecast();
 }); // Handling unit change for temperature display
 
 // Initializing the application

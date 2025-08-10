@@ -47,12 +47,6 @@
                 aria-label="Recent cities"></select>
         </section>
 
-        <!-- Loading indicator -->
-        <section id="loadingWrap" class="hidden items-center justify-center mb-4">
-            <div class="spinner" aria-hidden="true"></div>
-            <p class="ml-3">Loading...</p>
-        </section>
-
         <!-- Current weather display -->
         <section id="weatherDisplay" class="glass rounded-xl p-4 sm:p-6 shadow-lg hidden mx-auto w-full">
             <div class="flex flex-row items-center justify-between gap-4 w-full">
@@ -76,6 +70,12 @@
                     <p>Pressure: <span id="pressure">--</span> hPa</p>
                 </div>
             </div>
+        </section>
+
+        <!-- 5-Days Forecast -->
+        <section class="mt-5">
+            <h3 class="text-lg mb-5">5-Days Forecast</h3>
+            <div id="forecastContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 w-full"></div>
         </section>
     </main>
 
