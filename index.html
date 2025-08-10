@@ -1,15 +1,59 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+    <!-- Basic HTML meta tags -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Weather App</title>
+    <!-- Link to Tailwind and custom styles -->
     <link rel="stylesheet" href="output.css">
 </head>
+
 <body>
-    <video autoplay muted loop playsinline class="bg-video absolute inset-0 w-full h-full object-cover -z-10">
-        <source src="assets/bg-video.mp4" type="video/mp4">
-    </video>
+    <!-- Background video -->
+    <div class="video-wrapper">
+        <video id="bgVideo" autoplay muted loop playsinline preload="auto"
+            class="bg-video brightness-60 sm:brightness-65">
+            <source id="bgSource" src="assets/bg-video-day.mp4" type="video/mp4">
+        </video>
+    </div>
+    <!-- Dark overlay over video -->
+    <div class="bg-overlay bg-black/40 sm:bg-black/30"></div>
+
+    <!-- Main content wrapper -->
+    <main id="app" class="relative max-w-6xl mx-auto p-4">
+        <!-- Title and temperature unit selector -->
+        <section class="flex items-center justify-between mb-6">
+            <h1 class="text-white text-2xl font-bold">🌤️ Weather Forecast</h1>
+            <div class="flex gap-2 items-center">
+                <select id="unitSelector" class="px-4 py-2 rounded text-sm md:min-w-[120px]"
+                    aria-label="Temperature unit">
+                    <option value="C">°C</option>
+                    <option value="F">°F</option>
+                </select>
+            </div>
+        </section>
+
+        <!-- Search controls -->
+        <section id="controls"
+            class="flex flex-col gap-2 items-stretch mb-6 sm:flex-row sm:gap-1 sm:flex-nowrap md:gap-2 md:flex-wrap">
+            <input id="cityInput" type="text" placeholder="Enter city (eg. Delhi)"
+                class="px-4 py-2 rounded w-full sm:w-2/5 md:flex-1 md:min-w-[200px]"
+                aria-label="City input">
+            <button id="searchBtn" class="px-6 py-2 rounded w-full sm:w-[15%] md:min-w-[100px]">Search</button>
+            <button id="currentBtn"
+                class="px-4 py-2 rounded w-full sm:w-1/4 md:min-w-[100px]">Use Current Location</button>
+            <select id="recentCities" class="hidden px-4 py-2 rounded w-full sm:w-1/5 md:min-w-[120px]"
+                aria-label="Recent cities"></select>
+        </section>
+    </main>
+ 
+
+
+
+    <!-- Link to JavaScript file -->
     <script src="index.js"></script>
 </body>
+
 </html>
