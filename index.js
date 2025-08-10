@@ -2,7 +2,13 @@
 const WEATHER_API_KEY = "d51ad29ad9fe76f76b4358982339d9f7";
 
 const els = {
+    bgVideo: document.getElementById("bgVideo"),
+    bgSource: document.getElementById("bgSource"),
+    cityInput: document.getElementById("cityInput"),
+    searchBtn: document.getElementById("searchBtn"),
     currentBtn: document.getElementById("currentBtn"),
+    recentCities: document.getElementById("recentCities"),
+    unitSelector: document.getElementById("unitSelector"),
     loadingWrap: document.getElementById('loadingWrap'),
     weatherDisplay: document.getElementById("weatherDisplay"),
     cityName: document.getElementById("cityName"),
@@ -152,9 +158,39 @@ function useCurrentLocation() {
         { enableHighAccuracy: true, timeout: 8000 } // Geolocation options
     );
 }
+// Saving recent cities to localStorage (up to 5 cities if length exceeds than 5 then remove the last one)
+function saveRecent(city) {
+    const key = 'recentCities_v1';
+    const arr = JSON.parse(localStorage.getItem(key) || '[]'); // Retrieving recent cities from localStorage
+    const idx = arr.indexOf(city);
+    if (idx !== -1) arr.splice(idx, 1);
+    arr.unshift(city);
+    if (arr.length > 5) arr.pop(); // Keeping only the latest 5 cities
+    localStorage.setItem(key, JSON.stringify(arr));
+    renderRecent(arr);
+}
+
+// Rendering recent cities in the dropdown
+function renderRecent(arr) {
+    const el = els.recentCities;
+    if (!arr || arr.length === 0) { el.classList.add('hidden'); return; }
+    el.classList.remove('hidden');
+    el.innerHTML = arr.map(c => `<option value="${c}">${c}</option>`).join(''); // Generating options for recent cities
+}
+
+// Adding event listeners for search and current location buttons
+els.searchBtn.addEventListener('click', () => { fetchWeatherByCity(els.cityInput.value); }); // Handling search button click to fetch weather by city
+els.cityInput.addEventListener('keydown', e => { if (e.key === 'Enter') fetchWeatherByCity(els.cityInput.value); }); // Handling Enter key press to fetch weather by city
+els.currentBtn.addEventListener('click', useCurrentLocation); // Handling current location button click to fetch weather based on geolocation
+els.recentCities.addEventListener('change', e => { fetchWeatherByCity(e.target.value); }); // Handling recent city selection from dropdown
+els.unitSelector.addEventListener('change', () => {
+    isCelsius = els.unitSelector.value === 'C';
+    if (currentWeatherData) renderCurrent(currentWeatherData);
+}); // Handling unit change for temperature display
 
 // Initializing the application
 (function init() {
-    els.currentBtn.addEventListener('click', useCurrentLocation); // Adding click event to current location button
-    fetchWeatherByCity('Delhi'); // Fetching default city weather on load
+    const saved = JSON.parse(localStorage.getItem('recentCities_v1') || '[]');
+    renderRecent(saved);
+    useCurrentLocation();
 })();
